@@ -352,17 +352,19 @@ if st.session_state.result is not None:
     st.header(f"{st.session_state.user_name}, you are a {result}!")
     st.subheader(info["tagline"])
 
-    # ---- BONUS: did they guess right? ----
-    guess_emoji = RESULTS[guess]["emoji"]
-    if guess == result:
-        st.balloons()  # 🎈 confetti-style balloons float up the screen!
-        st.success(f"🔮 You guessed {guess_emoji} {guess} and you were RIGHT! You know yourself so well! 🎉")
-    else:
-        guess_score = st.session_state.scores[guess]
-        st.info(
-            f"🔮 You guessed {guess_emoji} {guess}, but you're actually {info['emoji']} {result}! "
-            f"({guess} got {guess_score}/{len(QUESTIONS)} of your answers.) Surprise! 😆"
-        )
+        # ---- BONUS: did they guess right? ----
+    # If there's no guess (for example, an old session), just skip this part.
+    if guess is not None:
+        guess_emoji = RESULTS[guess]["emoji"]
+        if guess == result:
+            st.balloons()  # 🎈 balloons float up the screen!
+            st.success(f"🔮 You guessed {guess_emoji} {guess} and you were RIGHT! You know yourself so well! 🎉")
+        else:
+            guess_score = st.session_state.scores[guess]
+            st.info(
+                f"🔮 You guessed {guess_emoji} {guess}, but you're actually {info['emoji']} {result}! "
+                f"({guess} got {guess_score}/{len(QUESTIONS)} of your answers.) Surprise! 😆"
+            )
 
     st.write(info["description"])
 
