@@ -12,6 +12,62 @@ st.set_page_config(
     page_icon="🧁",
 )
 
+# ---------- THE RESULTS ----------
+# A dictionary of dictionaries. Each dessert has its own little info card.
+# Change the text to make it yours!
+RESULTS = {
+    "Cupcake": {
+        "emoji": "🧁",
+        "tagline": "Sweet, caring, and always adding a little sparkle ✨",
+        "description": (
+            "You're the friend everyone feels safe around. You remember birthdays, "
+            "send the nicest messages, and make even boring days feel special. "
+            "You love pretty things and you put love into everything you do."
+        ),
+        "traits": ["Kind-hearted 🥰", "Loves cute details 🎀", "A natural caregiver 💌"],
+    },
+    "Ice Cream": {
+        "emoji": "🍦",
+        "tagline": "Fun, bright, and always up for an adventure ☀️",
+        "description": (
+            "You bring the sunshine wherever you go. You're spontaneous, friendly, "
+            "and the first to say 'let's do it!' People love your energy, "
+            "and you make every day feel like summer."
+        ),
+        "traits": ["Adventurous 🗺️", "Easygoing 🌊", "Super friendly 😎"],
+    },
+    "Macaron": {
+        "emoji": "🍬",
+        "tagline": "Elegant, creative, and a little dreamy 💜",
+        "description": (
+            "You have taste and you know it. You notice beautiful little details "
+            "that others miss, and your mind is full of ideas. You might be quiet, "
+            "but your style and creativity speak loudly."
+        ),
+        "traits": ["Creative 🎨", "Great taste ✨", "Thoughtful 🤍"],
+    },
+    "Brownie": {
+        "emoji": "🍫",
+        "tagline": "Warm, cosy, and everyone's comfort person 🧸",
+        "description": (
+            "You're the friend people go to when they need a hug or good advice. "
+            "You love quiet nights, deep talks, and a warm blanket. "
+            "Being around you feels like coming home."
+        ),
+        "traits": ["Comforting 🫶", "A great listener 👂", "Loyal 🤎"],
+    },
+    "Donut": {
+        "emoji": "🍩",
+        "tagline": "Playful, chaotic, and absolutely unforgettable 🎢",
+        "description": (
+            "Life is never boring with you around! You're funny, unpredictable, "
+            "and you make any room more fun. You don't take things too seriously, "
+            "and your friends wouldn't have you any other way."
+        ),
+        "traits": ["Hilarious 😂", "Full of surprises 🎉", "Never boring 🤪"],
+    },
+}
+
 # ---------- THE QUESTIONS ----------
 # A list [] of dictionaries {}. Each dictionary is one question.
 # "options" maps each answer text -> the dessert that answer points to.
@@ -172,7 +228,6 @@ QUESTIONS = [
 
 
 # ---------- THE SCORING FUNCTION ----------
-# A function is a mini-program with a name. We "call" it when we need it.
 # This one takes the user's answers and gives back the winning dessert + the scores.
 def calculate_result(answers):
     # Start every dessert on 0 points, e.g. {"Cupcake": 0, "Ice Cream": 0, ...}
@@ -209,7 +264,6 @@ if "scores" not in st.session_state:
     st.session_state.scores = {}
 
 # Shuffle the answer order ONCE per visitor, then remember it.
-# (If we shuffled on every rerun, the answers would jump around!)
 if "shuffled_options" not in st.session_state:
     st.session_state.shuffled_options = []   # one shuffled list per question
     for q in QUESTIONS:
@@ -220,15 +274,52 @@ if "shuffled_options" not in st.session_state:
 # ---------- TITLE (shown on every page) ----------
 st.title(f"✨ Which {QUIZ_TOPIC} Are You? 🧁")
 
+# ---------- RESULT PAGE ----------
+# If we already have a result, show it (and nothing else).
+if st.session_state.result is not None:
+    result = st.session_state.result   # e.g. "Cupcake"
+    info = RESULTS[result]             # the info card for that dessert
+
+    st.markdown(f"# {info['emoji']}")
+    st.header(f"{st.session_state.user_name}, you are a {result}!")
+    st.subheader(info["tagline"])
+    st.write(info["description"])
+
+    # Show the traits one by one
+    st.write("**Your sweet traits:**")
+    for trait in info["traits"]:
+        st.write(f"- {trait}")
+
+    st.divider()  # a thin line to separate sections
+
+    # Score breakdown: highest score first
+    st.write("**Your full dessert breakdown:** 🍰")
+    sorted_scores = sorted(
+        st.session_state.scores.items(),
+        key=lambda item: item[1],   # sort by the score (the 2nd part of each pair)
+        reverse=True,               # biggest first
+    )
+    for dessert, score in sorted_scores:
+        st.write(f"{RESULTS[dessert]['emoji']} {dessert}: {score}/{len(QUESTIONS)}")
+        st.progress(score / len(QUESTIONS))   # a bar from 0.0 (empty) to 1.0 (full)
+
+    st.divider()
+
+    # Retake button: wipe the app's memory and start over
+    if st.button("Retake the quiz 🔄"):
+        for key in list(st.session_state.keys()):
+            del st.session_state[key]
+        st.rerun()
+
 # ---------- WELCOME PAGE ----------
-if not st.session_state.started:
-    st.write("Hello! Answer a few random questions and discover your sweet match. 💖")
+elif not st.session_state.started:
+    st.write("Welcome, sweet soul! 🌸 Answer a few random questions and discover your true match. 💖")
 
     name = st.text_input("What's your name? 💌")
 
     if st.button("Start the quiz 🌈"):
         if name.strip() == "":
-            st.warning("Please input your name first! ")
+            st.warning("Please tell me your name first! 🥺")
         else:
             st.session_state.user_name = name.strip()
             st.session_state.started = True
@@ -237,6 +328,7 @@ if not st.session_state.started:
 # ---------- QUESTIONS PAGE ----------
 else:
     st.write(f"Okay {st.session_state.user_name}, let's begin! 🎀")
+    st.caption(f"{len(QUESTIONS)} questions, no wrong answers 💕")
 
     with st.form("quiz_form"):
         answers = []
@@ -257,14 +349,10 @@ else:
 
     if submitted:
         if None in answers:
-            st.warning("Please answer every question! ")
+            st.warning("Please answer every question! 🥺")
         else:
-            # Work out the result and save it in the app's memory
+            # Work out the result, save it, then reload to show the result page
             result, scores = calculate_result(answers)
             st.session_state.result = result
             st.session_state.scores = scores
-
-    # ---------- TEMPORARY RESULT (we'll make this pretty in Section 4) ----------
-    if st.session_state.result is not None:
-        st.success(f"🎉 {st.session_state.user_name}, you are a {st.session_state.result}!")
-        st.write("Scores (just for testing):", st.session_state.scores)
+            st.rerun()
