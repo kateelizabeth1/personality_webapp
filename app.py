@@ -323,12 +323,12 @@ if "started" not in st.session_state:
     st.session_state.started = False
 if "user_name" not in st.session_state:
     st.session_state.user_name = ""
-if "guess" not in st.session_state:
-    st.session_state.guess = None    # the dessert the user GUESSES they are
 if "result" not in st.session_state:
     st.session_state.result = None   # None = no result yet
 if "scores" not in st.session_state:
     st.session_state.scores = {}
+if "guess" not in st.session_state:
+    st.session_state.guess = None    # the dessert the user GUESSES they are
 
 # Shuffle the answer order ONCE per visitor, then remember it.
 if "shuffled_options" not in st.session_state:
@@ -341,31 +341,26 @@ if "shuffled_options" not in st.session_state:
 # ---------- TITLE (shown on every page) ----------
 st.title(f"✨ Which {QUIZ_TOPIC} Are You? 🧁")
 
-# ---------- RESULT PAGE ----------
-# If we already have a result, show it (and nothing else).
-if st.session_state.result is not None:
+# ---------- PAGE 4: RESULT PAGE ----------
+# We have a result AND a guess, so show the big reveal!
+if st.session_state.result is not None and st.session_state.guess is not None:
     result = st.session_state.result   # e.g. "Cupcake"
-    guess = st.session_state.guess     # what they guessed at the start
-    info = RESULTS[result]             # the info card for that dessert
+    guess = st.session_state.guess     # what they guessed
+    info = RESULTS[result]             # the info card for the real result
+    guess_emoji = RESULTS[guess]["emoji"]
+
+    # ---- BONUS: guess vs real result ----
+    st.write(f"🔮 You guessed: **{guess_emoji} {guess}**")
+
+    if guess == result:
+        st.balloons()  # 🎈 balloons float up the screen!
+        st.success(f"And you were RIGHT! You're a {info['emoji']} {result}! You know yourself so well! 🎉")
+    else:
+        st.info(f"But you're actually a {info['emoji']} {result}! Surprise! 😆")
 
     st.markdown(f"# {info['emoji']}")
     st.header(f"{st.session_state.user_name}, you are a {result}!")
     st.subheader(info["tagline"])
-
-        # ---- BONUS: did they guess right? ----
-    # If there's no guess (for example, an old session), just skip this part.
-    if guess is not None:
-        guess_emoji = RESULTS[guess]["emoji"]
-        if guess == result:
-            st.balloons()  # 🎈 balloons float up the screen!
-            st.success(f"🔮 You guessed {guess_emoji} {guess} and you were RIGHT! You know yourself so well! 🎉")
-        else:
-            guess_score = st.session_state.scores[guess]
-            st.info(
-                f"🔮 You guessed {guess_emoji} {guess}, but you're actually {info['emoji']} {result}! "
-                f"({guess} got {guess_score}/{len(QUESTIONS)} of your answers.) Surprise! 😆"
-            )
-
     st.write(info["description"])
 
     # Show the traits one by one
@@ -396,34 +391,43 @@ if st.session_state.result is not None:
             del st.session_state[key]
         st.rerun()
 
-# ---------- WELCOME PAGE ----------
-elif not st.session_state.started:
-    st.write("Welcome, sweet soul! 🌸 Answer a few random questions and discover your true match. 💖")
+# ---------- PAGE 3: GUESS PAGE ----------
+# We have a result, but no guess yet. Ask for the guess BEFORE revealing!
+elif st.session_state.result is not None:
+    st.header("🥁 Your answers are in!")
+    st.write("Before I reveal your dessert... which one do you think you are? 🔮")
 
-    name = st.text_input("What's your name? 💌")
-
-    # ---- BONUS: "Tag yourself!" guess ----
     # format_func changes how each option LOOKS (adds the emoji)
     # while the value we get back is still just the dessert name.
     guess_choice = st.radio(
-        "🔮 Tag yourself! Which dessert do you think you are?",
+        "Tag yourself! 🍰",
         DESSERTS,
         index=None,
         format_func=lambda dessert: f"{RESULTS[dessert]['emoji']} {dessert}",
     )
 
+    if st.button("Reveal my dessert 🍧"):
+        if guess_choice is None:
+            st.warning("Make a guess first, no peeking! 🔮")
+        else:
+            st.session_state.guess = guess_choice   # remember the guess
+            st.rerun()
+
+# ---------- PAGE 1: WELCOME PAGE ----------
+elif not st.session_state.started:
+    st.write("Welcome, sweet soul! 🌸 Answer a few random questions and discover your true match. 💖")
+
+    name = st.text_input("What's your name? 💌")
+
     if st.button("Start the quiz 🌈"):
         if name.strip() == "":
             st.warning("Please tell me your name first! 🥺")
-        elif guess_choice is None:
-            st.warning("Make a guess first, no peeking! 🔮")
         else:
             st.session_state.user_name = name.strip()
-            st.session_state.guess = guess_choice   # remember the guess
             st.session_state.started = True
             st.rerun()
 
-# ---------- QUESTIONS PAGE ----------
+# ---------- PAGE 2: QUESTIONS PAGE ----------
 else:
     st.write(f"Okay {st.session_state.user_name}, let's begin! 🎀")
     st.caption(f"{len(QUESTIONS)} questions, no wrong answers 💕")
@@ -443,13 +447,13 @@ else:
             )
             answers.append(choice)
 
-        submitted = st.form_submit_button("Reveal my dessert 🍧")
+        submitted = st.form_submit_button("Done! 🍧")
 
     if submitted:
         if None in answers:
             st.warning("Please answer every question! 🥺")
         else:
-            # Work out the result, save it, then reload to show the result page
+            # Work out the result and save it quietly (we DON'T show it yet!)
             result, scores = calculate_result(answers)
             st.session_state.result = result
             st.session_state.scores = scores
