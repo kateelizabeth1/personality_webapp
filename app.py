@@ -430,7 +430,6 @@ elif not st.session_state.started:
 # ---------- PAGE 2: QUESTIONS PAGE ----------
 else:
     st.write(f"Okay {st.session_state.user_name}, let's begin! 🎀")
-    st.caption(f"{len(QUESTIONS)} questions, no wrong answers 💕")
 
     with st.form("quiz_form"):
         answers = []
