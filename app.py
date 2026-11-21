@@ -12,9 +12,74 @@ st.set_page_config(
     page_icon="🧁",
 )
 
+# ---------- COLOURS AND STYLING ----------
+# CSS is the language that controls how web pages look.
+# Streamlit lets us add our own CSS using st.markdown with unsafe_allow_html=True.
+# Colours are "hex codes" like #ffd6e8. Change them to make your own palette!
+CUSTOM_CSS = """
+<style>
+/* A cute rounded font from Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@500;700&display=swap');
+
+html, body, .stApp, button, input, label, p, li {
+    font-family: 'Quicksand', sans-serif;
+}
+
+/* Dreamy pastel gradient background: pink -> lavender -> baby blue */
+.stApp {
+    background: linear-gradient(160deg, #fff0f6 0%, #f0e9ff 50%, #e6f7ff 100%);
+}
+
+/* Main text colour: a soft plum, easy to read on pastel */
+.stApp, .stApp p, .stApp label, .stApp li {
+    color: #5b3a5e;
+}
+
+/* Headings: a deeper pink so they stand out */
+h1, h2, h3 {
+    color: #c2418a !important;
+    font-weight: 700 !important;
+}
+
+/* Buttons: soft pink, rounded, and they get darker when you hover */
+.stButton > button, .stFormSubmitButton > button {
+    background-color: #ffd6e8;
+    color: #7a2e5c;
+    border: 2px solid #ff9fc9;
+    border-radius: 20px;
+    padding: 0.5rem 1.5rem;
+    font-weight: 700;
+}
+.stButton > button:hover, .stFormSubmitButton > button:hover {
+    background-color: #ffc2de;
+    border-color: #ff7ab5;
+    color: #7a2e5c;
+}
+
+/* The quiz form becomes a see-through white "card" */
+[data-testid="stForm"] {
+    background: rgba(255, 255, 255, 0.6);
+    border: 2px solid #ffd1e6;
+    border-radius: 24px;
+    padding: 1.5rem;
+}
+
+/* The name box: rounded with a pink border */
+.stTextInput input {
+    border-radius: 14px;
+    border: 2px solid #ffd1e6;
+}
+
+/* Progress bars on the result page: pink */
+.stProgress > div > div > div > div {
+    background-color: #ff8fc0;
+}
+</style>
+"""
+st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
+
 # ---------- THE RESULTS ----------
 # A dictionary of dictionaries. Each dessert has its own little info card.
-# Change the text to make it yours!
 RESULTS = {
     "Cupcake": {
         "emoji": "🧁",
@@ -137,7 +202,7 @@ QUESTIONS = [
     {
         "question": "Pick a pair of shoes 👟",
         "options": {
-            "Sparkly pink sneakers 💖": "Cupcake",
+            "Cute sneakers 💖": "Cupcake",
             "Comfy sandals ☀️": "Ice Cream",
             "Vintage loafers with cute socks 🧦": "Macaron",
             "Fuzzy slippers, always 🥿": "Brownie",
@@ -258,6 +323,8 @@ if "started" not in st.session_state:
     st.session_state.started = False
 if "user_name" not in st.session_state:
     st.session_state.user_name = ""
+if "guess" not in st.session_state:
+    st.session_state.guess = None    # the dessert the user GUESSES they are
 if "result" not in st.session_state:
     st.session_state.result = None   # None = no result yet
 if "scores" not in st.session_state:
@@ -278,11 +345,25 @@ st.title(f"✨ Which {QUIZ_TOPIC} Are You? 🧁")
 # If we already have a result, show it (and nothing else).
 if st.session_state.result is not None:
     result = st.session_state.result   # e.g. "Cupcake"
+    guess = st.session_state.guess     # what they guessed at the start
     info = RESULTS[result]             # the info card for that dessert
 
     st.markdown(f"# {info['emoji']}")
     st.header(f"{st.session_state.user_name}, you are a {result}!")
     st.subheader(info["tagline"])
+
+    # ---- BONUS: did they guess right? ----
+    guess_emoji = RESULTS[guess]["emoji"]
+    if guess == result:
+        st.balloons()  # 🎈 confetti-style balloons float up the screen!
+        st.success(f"🔮 You guessed {guess_emoji} {guess} and you were RIGHT! You know yourself so well! 🎉")
+    else:
+        guess_score = st.session_state.scores[guess]
+        st.info(
+            f"🔮 You guessed {guess_emoji} {guess}, but you're actually {info['emoji']} {result}! "
+            f"({guess} got {guess_score}/{len(QUESTIONS)} of your answers.) Surprise! 😆"
+        )
+
     st.write(info["description"])
 
     # Show the traits one by one
@@ -300,7 +381,9 @@ if st.session_state.result is not None:
         reverse=True,               # biggest first
     )
     for dessert, score in sorted_scores:
-        st.write(f"{RESULTS[dessert]['emoji']} {dessert}: {score}/{len(QUESTIONS)}")
+        # Add a little marker next to the dessert they guessed
+        marker = "  ← your guess 🔮" if dessert == guess else ""
+        st.write(f"{RESULTS[dessert]['emoji']} {dessert}: {score}/{len(QUESTIONS)}{marker}")
         st.progress(score / len(QUESTIONS))   # a bar from 0.0 (empty) to 1.0 (full)
 
     st.divider()
@@ -317,11 +400,24 @@ elif not st.session_state.started:
 
     name = st.text_input("What's your name? 💌")
 
+    # ---- BONUS: "Tag yourself!" guess ----
+    # format_func changes how each option LOOKS (adds the emoji)
+    # while the value we get back is still just the dessert name.
+    guess_choice = st.radio(
+        "🔮 Tag yourself! Which dessert do you think you are?",
+        DESSERTS,
+        index=None,
+        format_func=lambda dessert: f"{RESULTS[dessert]['emoji']} {dessert}",
+    )
+
     if st.button("Start the quiz 🌈"):
         if name.strip() == "":
             st.warning("Please tell me your name first! 🥺")
+        elif guess_choice is None:
+            st.warning("Make a guess first, no peeking! 🔮")
         else:
             st.session_state.user_name = name.strip()
+            st.session_state.guess = guess_choice   # remember the guess
             st.session_state.started = True
             st.rerun()
 
