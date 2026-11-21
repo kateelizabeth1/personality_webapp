@@ -415,13 +415,13 @@ elif st.session_state.result is not None:
 
 # ---------- PAGE 1: WELCOME PAGE ----------
 elif not st.session_state.started:
-    st.write("Welcome, sweet soul! 🌸 Answer a few random questions and discover your true match. 💖")
+    st.write("Hello! Answer a few random questions and discover your sweet match. 💖")
 
     name = st.text_input("What's your name? 💌")
 
     if st.button("Start the quiz 🌈"):
         if name.strip() == "":
-            st.warning("Please tell me your name first! 🥺")
+            st.warning("Please input your name first! ")
         else:
             st.session_state.user_name = name.strip()
             st.session_state.started = True
