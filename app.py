@@ -1,38 +1,11 @@
-import streamlit as st  # Streamlit is the library that turns Python into a web app
-
-# ---------- SETTINGS ----------
-# Change this one word to change the whole quiz topic!
-QUIZ_TOPIC = "Dessert"
-
-# The list of possible results. Keep these names the SAME as in the questions!
-DESSERTS = ["Cupcake", "Ice Cream", "Macaron", "Brownie", "Donut"]
-
-# This sets the browser tab title and little tab icon.
-# It must be the FIRST Streamlit command in the file.
-st.set_page_config(
-    page_title=f"Which {QUIZ_TOPIC} Are You?",
-    page_icon="🧁",
-)
-
-# ---------- TITLE AND WELCOME ----------
-st.title(f"✨ Which {QUIZ_TOPIC} Are You? 🧁")
-st.write("Hello! Answer a few questions and discover your sweet match. 💖")
-
-# A text box where the user types their name
-name = st.text_input("What's your name? 💌")
-
-# A button to begin the quiz
-if st.button("Start the quiz 🌈"):
-    # .strip() removes spaces, so a name made of only spaces counts as empty
-    if name.strip() == "":
-        st.warning("Please input your name first! ")
-    else:
-        st.success(f"Hi {name}! 🎀 Get ready, the questions are coming soon...")
-import random  # random lets us shuffle things
+import random  # random lets us shuffle things and pick random winners
 import streamlit as st  # Streamlit turns Python into a web app
 
 # ---------- SETTINGS ----------
 QUIZ_TOPIC = "Dessert"
+
+# The list of possible results. Keep these names the SAME as in the questions!
+DESSERTS = ["Cupcake", "Ice Cream", "Macaron", "Brownie", "Donut"]
 
 st.set_page_config(
     page_title=f"Which {QUIZ_TOPIC} Are You?",
@@ -43,7 +16,6 @@ st.set_page_config(
 # A list [] of dictionaries {}. Each dictionary is one question.
 # "options" maps each answer text -> the dessert that answer points to.
 # The user only sees the answer text. The dessert names stay hidden!
-# The 5 desserts: Cupcake, Ice Cream, Macaron, Brownie, Donut.
 # Tip: every question should give each dessert exactly one answer.
 QUESTIONS = [
     {
@@ -198,12 +170,43 @@ QUESTIONS = [
     },
 ]
 
+
+# ---------- THE SCORING FUNCTION ----------
+# A function is a mini-program with a name. We "call" it when we need it.
+# This one takes the user's answers and gives back the winning dessert + the scores.
+def calculate_result(answers):
+    # Start every dessert on 0 points, e.g. {"Cupcake": 0, "Ice Cream": 0, ...}
+    scores = {dessert: 0 for dessert in DESSERTS}
+
+    # Go through each answer. i = question number, answer_text = what they picked
+    for i, answer_text in enumerate(answers):
+        # Look up the hidden dessert for this answer
+        dessert = QUESTIONS[i]["options"][answer_text]
+        # Give that dessert +1 point
+        scores[dessert] += 1
+
+    # Find the highest score
+    top_score = max(scores.values())
+
+    # Make a list of every dessert that has the top score
+    winners = [dessert for dessert, score in scores.items() if score == top_score]
+
+    # If there's a tie, random.choice picks one of the tied desserts
+    result = random.choice(winners)
+
+    return result, scores
+
+
 # ---------- APP MEMORY ----------
 # session_state remembers things between clicks.
 if "started" not in st.session_state:
     st.session_state.started = False
 if "user_name" not in st.session_state:
     st.session_state.user_name = ""
+if "result" not in st.session_state:
+    st.session_state.result = None   # None = no result yet
+if "scores" not in st.session_state:
+    st.session_state.scores = {}
 
 # Shuffle the answer order ONCE per visitor, then remember it.
 # (If we shuffled on every rerun, the answers would jump around!)
@@ -219,13 +222,13 @@ st.title(f"✨ Which {QUIZ_TOPIC} Are You? 🧁")
 
 # ---------- WELCOME PAGE ----------
 if not st.session_state.started:
-    st.write("Welcome, sweet soul! 🌸 Answer a few random questions and discover your true match. 💖")
+    st.write("Hello! Answer a few random questions and discover your sweet match. 💖")
 
     name = st.text_input("What's your name? 💌")
 
     if st.button("Start the quiz 🌈"):
         if name.strip() == "":
-            st.warning("Please tell me your name first! 🥺")
+            st.warning("Please input your name first! ")
         else:
             st.session_state.user_name = name.strip()
             st.session_state.started = True
@@ -234,7 +237,6 @@ if not st.session_state.started:
 # ---------- QUESTIONS PAGE ----------
 else:
     st.write(f"Okay {st.session_state.user_name}, let's begin! 🎀")
-    st.caption(f"{len(QUESTIONS)} questions, no wrong answers 💕")
 
     with st.form("quiz_form"):
         answers = []
@@ -255,7 +257,14 @@ else:
 
     if submitted:
         if None in answers:
-            st.warning("Please answer every question! 🥺")
+            st.warning("Please answer every question! ")
         else:
-            st.session_state.answers = answers
-            st.success("Answers saved! 🎉 Your result is coming in the next section...")
+            # Work out the result and save it in the app's memory
+            result, scores = calculate_result(answers)
+            st.session_state.result = result
+            st.session_state.scores = scores
+
+    # ---------- TEMPORARY RESULT (we'll make this pretty in Section 4) ----------
+    if st.session_state.result is not None:
+        st.success(f"🎉 {st.session_state.user_name}, you are a {st.session_state.result}!")
+        st.write("Scores (just for testing):", st.session_state.scores)
